@@ -6,10 +6,12 @@ namespace CleanArchitecture.Application.Products.Commands;
 
 /// <summary>
 /// APPLICATION LAYER - Use Case для створення продукту
-/// Команди змінюють стан системи
+/// 
+/// 🎯 Цей Command = Use Case з Clean Architecture.
+/// Команди - це Use Cases що змінюють стан системи.
 /// 
 /// ПРИМІТКА: Це CQS Command (зміна стану без повернення даних, окрім результату).
-/// Альтернатива - метод CreateAsync() у сервісі.
+/// Альтернатива - Use Case через метод CreateAsync() у сервісі.
 /// CQS не є обов'язковим для Clean Architecture.
 /// </summary>
 public record CreateProductCommand(
