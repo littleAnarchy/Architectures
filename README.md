@@ -215,65 +215,617 @@
 
 ## 🔑 Ключові концепції
 
-### Інверсія залежностей (Dependency Inversion)
+### 1. Dependency Rule (правило залежностей)
 
-**3-Layer** (без інверсії):
+Це **ядро Clean та Onion** архітектур, сформульоване Robert C. Martin (Uncle Bob).
+
+**Правило**: залежності у коді мають указувати **ВСЕРЕДИНУ** (до центру, де бізнес-логіка), **НІКОЛИ** зовні.
+
+```
+┌────────────────────────────────────────────┐
+│  Outer Rings (Frameworks, Databases, UI)  │
+│       ↓ можна залежить від усього          │
+│  ┌──────────────────────────────────────┐  │
+│  │  Middle (Controllers, Gateways)      │  │
+│  │       ↓ залежить                      │  │
+│  │  ┌──────────────────────────────────┐│  │
+│  │  │  Core (Domain, Use Cases)        ││  │
+│  │  │  ↑ залежить ні від чого           ││  │
+│  │  └──────────────────────────────────┘│  │
+│  └──────────────────────────────────────┘  │
+└────────────────────────────────────────────┘
+```
+
+#### Порушення правила (3-Layer без інверсії)
+
 ```csharp
-// Business Layer залежить від конкретної реалізації
+// ❌ BAD: залежність йде ЗОВНІ (на Database)
 public class ProductService
 {
-    private readonly ProductRepository _repo; // конкретний клас!
+    private readonly ProductRepository _repo; // конкретна реалізація
+    // Якщо змінити БД, потрібно міняти Service
 }
 ```
 
-**Clean/Onion** (з інверсією):
+#### Дотримання правила (Clean / Onion з інверсією)
+
 ```csharp
-// Application/Domain визначає інтерфейс
-public interface IProductRepository { }
-
-// Infrastructure реалізує
-public class ProductRepository : IProductRepository { }
-
-// Application використовує інтерфейс
-public class ProductService
+// ✅ GOOD: залежність йде ВСЕРЕДИНУ (на інтерфейс у Application/Domain)
+public class CreateProductUseCase
 {
-    private readonly IProductRepository _repo; // абстракція!
+    private readonly IProductRepository _repo; // абстракція, контракт
 }
+
+// Де визначений інтерфейс?
+// - Clean: у Application Layer (Application визначає контракт)
+// - Onion: у Domain Layer (Domain визначає, що йому потрібне)
 ```
+
+**Ключовий момент**: це не просто "додати інтерфейс", а структурно організувати каркас так, щоб залежності йшли в один бік.
 
 ---
 
-### Domain Logic розміщення
+### 2. Domain Model: Rich vs Anemic (спір у спільноті)
 
-**3-Layer**:
-```csharp
-// Бізнес-логіка в ServiceLayer
-public class ProductService
-{
-    public async Task<Product> CreateProduct(Product product)
-    {
-        if (product.Price <= 0) 
-            throw new Exception("Price must be positive");
-        // ...
-    }
-}
-```
+Це фундаментальна різниця у підходах до розміщення бізнес-логіки. **Обидва варіанти валідні**, але мають наслідки.
 
-**Clean/Onion**:
+#### Варіант A: Rich Domain Model 
+*(Preferable у Onion + DDD)*
+
 ```csharp
-// Бізнес-логіка в Domain Entity
+// Domain Entity містить бізнес-правила та логіку
 public class Product
 {
     private decimal _price;
     
-    public void SetPrice(decimal price)
+    public Product(string name, decimal price)
     {
-        if (price <= 0) 
-            throw new Exception("Price must be positive");
+        if (price <= 0)
+            throw new InvalidOperationException("Price must be positive");
+        Name = name;
         _price = price;
+    }
+    
+    // ✅ Бізнес-правила захищені у самої Entity
+    public void IncreasePrice(decimal percentageIncrease)
+    {
+        if (percentageIncrease <= 0)
+            throw new InvalidOperationException("Percentage must be positive");
+        _price = _price * (1 + percentageIncrease / 100);
+    }
+    
+    public void ApplyDiscount(decimal discountPercent)
+    {
+        if (discountPercent < 0 || discountPercent > 100)
+            throw new InvalidOperationException("Invalid discount");
+        _price = _price * (1 - discountPercent / 100);
+    }
+}
+
+// Application Service використовує готову логіку Entity
+public class UpdateProductUseCase
+{
+    private readonly IProductRepository _repo;
+    
+    public void Execute(int productId, decimal percentageIncrease)
+    {
+        var product = _repo.GetById(productId);
+        product.IncreasePrice(percentageIncrease); // ✅ Entity сам знає правило
+        _repo.Save(product);
     }
 }
 ```
+
+**Переваги**:
+- ✅ Бізнес-правила **захищені** (неможливо обійти)
+- ✅ Entity — це документація правил
+- ✅ Логіка **не дублюється** в різних Use Cases
+- ✅ Легше тестувати Entity окремо
+
+**Недоліки**:
+- ❌ Більше коду в Entity, може стати "толстим"
+- ❌ ORM ускладнює: EF Core, Hibernate потребують getter/setter
+- ❌ Менш підходить для простих CRUD операцій
+- ❌ Складніше при запиту даних (QuerySide у CQRS)
+
+---
+
+#### Варіант B: Anemic Domain Model 
+*(Часто у Clean Architecture в практиці)*
+
+```csharp
+// Domain Entity — просто контейнер даних, без логіки (Anemic)
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+}
+
+// Бізнес-логіка переміщена в Application Layer / Use Case
+public class UpdateProductUseCase
+{
+    private readonly IProductRepository _repo;
+    
+    public void Execute(int productId, decimal percentageIncrease)
+    {
+        // ⚠️ Валідація тут, не в Entity
+        if (percentageIncrease <= 0)
+            throw new InvalidOperationException("Percentage must be positive");
+        
+        var product = _repo.GetById(productId);
+        
+        // ⚠️ Розрахунок тут, не в Entity
+        product.Price = product.Price * (1 + percentageIncrease / 100);
+        
+        _repo.Save(product);
+    }
+}
+```
+
+**Переваги**:
+- ✅ Прості Entity, легко писати CRUD
+- ✅ Добре працює з ORM (EF, Dapper)
+- ✅ Логіка одного Use Case централізована й легко міняється
+- ✅ Менше "магії" у Domain Layer
+
+**Недоліки**:
+- ❌ Правила можуть **дублюватися** в різних Use Cases (CreateProduct, UpdateProduct, ImportProducts)
+- ❌ Нема однієї **source of truth** для правил
+- ❌ Entity без логіки — просто DTO, втрачає смисл
+- ❌ Складніше розібратися де які правила
+
+---
+
+**Clean Architecture на практиці у .NET світі:**
+- Часто поєднує Anemic Domain Model з логікою у **Use Cases** (MediatR Handlers)
+- Також активно використовує **Specification / Query Objects**
+- Це не порушення принципів, це прагматичний вибір для швидкості
+
+**Onion Architecture + DDD на практиці:**
+- Обов'язково Rich Domain Model
+- Domain Services для складної логіки
+- Application Services як оркестратори
+
+---
+
+### 3. Repository Pattern: критична позиція в архітектурі
+
+**Repository** — це інтерфейс доступу до даних. Його розташування сигналізує архітектуру:
+
+| Архітектура | Де Repository Interface | Логіка | Що це говорить |
+|------------|------------------------|--------|-----------------|
+| **3-Layer** | Data Access Layer | Repository разом з реалізацією (вона ж конкретна) | Залежність йде ЗОВНІ (до DB) — порушення |
+| **Clean** | Application Layer | Application визначає контракт, Infrastructure реалізує | Залежність йде ВСЕРЕДИНУ (Application) |
+| **Onion** | Domain Layer | Domain визначає потребу, Infrastructure реалізує | Залежність йде ВСЕРЕДИНУ (Domain) |
+| **Hexagonal** | Ports (ядро) | Port визначен у ядрі, Adapter реалізує зовні | Порти — це контракт між ядром і адаптерами |
+| **Vertical Slice** | Feature / Domain | Інтерфейс у слайсі або спільному Kernel | Залежить від організації (може бути як Clean, так і Onion) |
+
+**Приклад Clean**:
+```csharp
+// Features/Products/Application/Interfaces/
+public interface IProductRepository
+{
+    Task<Product> GetById(int id);
+    Task Save(Product product);
+}
+
+// Features/Products/Infrastructure/
+public class EFCoreProductRepository : IProductRepository { ... }
+
+// Features/Products/Application/UseCases/
+public class CreateProductUseCase // залежить від інтерфейсу, не реалізації
+{
+    private readonly IProductRepository _repo;
+}
+```
+
+**Приклад Onion**:
+```csharp
+// Domain/
+public interface IProductRepository { ... }
+
+// Application/
+public class ProductApplicationService
+{
+    private readonly IProductRepository _repo; // залежить від Domain контракту
+}
+
+// Infrastructure/
+public class ProductRepository : IProductRepository { ... }
+```
+
+---
+
+### 4. DTO (Data Transfer Object) vs Domain Entity
+
+Дуже часто плутаються. Це **різні концепції**:
+
+```csharp
+//══════════════════════════════════════════════════════════════
+// DOMAIN ENTITY (бізнес-об'єкт, це ваша цінність)
+//══════════════════════════════════════════════════════════════
+public class Product
+{
+    public int Id { get; private set; }
+    public string Name { get; private set; }
+    public decimal Price { get; private set; }
+    
+    public void SetPrice(decimal newPrice)
+    {
+        if (newPrice <= 0) throw new ArgumentException();
+        Price = newPrice;
+    }
+}
+
+//══════════════════════════════════════════════════════════════
+// REQUEST DTO (що приходить з UI / API)
+//══════════════════════════════════════════════════════════════
+public class CreateProductRequest
+{
+    [Required]
+    public string Name { get; set; }
+    
+    [Range(0.01, double.MaxValue)]
+    public decimal Price { get; set; }
+}
+
+//══════════════════════════════════════════════════════════════
+// RESPONSE DTO (що йде назад в UI / API)
+//══════════════════════════════════════════════════════════════
+public class ProductResponse
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+}
+
+//══════════════════════════════════════════════════════════════
+// USE CASE / APPLICATION SERVICE
+//══════════════════════════════════════════════════════════════
+public class CreateProductUseCase
+{
+    private readonly IProductRepository _repo;
+    
+    public ProductResponse Execute(CreateProductRequest request)
+    {
+        // 1️⃣ REQUEST DTO → DOMAIN ENTITY
+        var product = new Product(request.Name, request.Price);
+        
+        // 2️⃣ DOMAIN операції
+        var saved = _repo.Save(product);
+        
+        // 3️⃣ DOMAIN ENTITY → RESPONSE DTO
+        return new ProductResponse
+        {
+            Id = saved.Id,
+            Name = saved.Name,
+            Price = saved.Price
+        };
+    }
+}
+```
+
+**Чому це важливо?**
+
+- ✅ **Розділення відповідальності**: Entity не знає про HTTP, JSON, форми
+- ✅ **Гнучкість API**: можна мати різні DTO для різних операцій (CreateProduct, UpdateProduct, AdminProductView)
+- ✅ **Захист бізнесу**:  Entity змінюється для бізнесу, API контракт окремо
+- ✅ **Тестування**: можеш тестувати Entity окремо від веб
+
+**Помилка**: `public class Product : IHttpSerializable` або безпосередньо Entity в контролер
+
+---
+
+### 5. Use Cases (Clean) vs Application Services (Onion)
+
+Це **різні парадигми**, не синоніми!
+
+#### Clean Architecture підхід: Use Cases
+
+```csharp
+// ✅ Один Use Case = одна операція (CQRS spirit)
+// Features/Products/Application/UseCases/CreateProduct/
+
+public class CreateProductCommand
+{
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+}
+
+public class CreateProductResponse
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+
+public class CreateProductUseCase
+{
+    private readonly IProductRepository _repo;
+    
+    public CreateProductResponse Execute(CreateProductCommand cmd)
+    {
+        var product = new Product(cmd.Name, cmd.Price);
+        var saved = _repo.Save(product);
+        return new CreateProductResponse { Id = saved.Id, Name = saved.Name };
+    }
+}
+
+// Features/Products/Application/UseCases/GetProductById/
+
+public class GetProductByIdQuery
+{
+    public int ProductId { get; set; }
+}
+
+public class GetProductByIdUseCase
+{
+    private readonly IProductRepository _repo;
+    
+    public ProductResponse Execute(GetProductByIdQuery query)
+    {
+        var product = _repo.GetById(query.ProductId);
+        return new ProductResponse { /* ... */ };
+    }
+}
+```
+
+**У .NET часто реалізується через MediatR:**
+```csharp
+// MediatR обробляє routing
+public class CreateProductHandler : IRequestHandler<CreateProductCommand, CreateProductResponse>
+{
+    public Task<CreateProductResponse> Handle(CreateProductCommand request, CancellationToken cancellationToken)
+    { ... }
+}
+```
+
+**Переваги Use Cases:**
+- ✅ Single Responsibility (один сценарій — один клас)
+- ✅ Явні Input/Output контракти
+- ✅ Легше тестувати
+- ✅ Явні залежності
+
+---
+
+#### Onion Architecture підхід: Application Services
+
+```csharp
+// ✅ Один Service = операції для однієї Entity/Aggregate
+// Application/Services/
+
+public class ProductApplicationService
+{
+    private readonly IProductRepository _repo;
+    private readonly IProductDomainService _domainService; // Domain Service!
+    
+    public int Create(string name, decimal price)
+    {
+        var product = new Product(name, price);
+        return _repo.Save(product).Id;
+    }
+    
+    public void Update(int id, string name, decimal newPrice)
+    {
+        var product = _repo.GetById(id);
+        
+        // Domain Service може містити складну логіку
+        _domainService.ValidateAndUpdate(product, newPrice);
+        
+        _repo.Save(product);
+    }
+    
+    public void Delete(int id) => _repo.Delete(id);
+    
+    public Product GetById(int id) => _repo.GetById(id);
+}
+```
+
+**Переваги Application Service:**
+- ✅ Близко до традиційного Service Layer, знайоме більшості
+- ✅ Методи згруповані по темі (усі операції над Product тут)
+- ✅ Менше boilerplate при простих операціях
+
+**Недоліки:**
+- ❌ Менш explicit про вхід/вихід (можна забути параметр)
+- ❌ Методи можуть накопичуватися (God Service)
+
+---
+
+**Важливо**: Clean використовує **Use Cases**, Onion використовує **Application Services**. Це різне мислення!
+
+---
+
+### 6. Hexagonal Architecture: Ports & Adapters
+
+Інша парадигма. Замість "шарів" — **ядро + адаптери**.
+
+```
+┌─────────────────────────────┐
+│  PORTS (Interfaces)         │ у ядрі
+│  у Domain Layer             │
+└────────┬────────────────────┘
+         │ реалізує
+┌────────▼────────────────────┐
+│  ADAPTERS (Implementations) │ зовні
+│  Легко змінювати            │
+│  - EFCoreAdapter            │
+│  - MongoDbAdapter           │
+│  - InMemoryAdapter (тести)  │
+└─────────────────────────────┘
+```
+
+**Port**:
+```csharp
+// Domain/Ports/
+public interface IProductRepository // це PORT
+{
+    Task<Product> GetById(int id);
+    Task<Product> Save(Product product);
+}
+```
+
+**Adapters**:
+```csharp
+// Adapters/
+
+public class EFCoreProductAdapter : IProductRepository // Adapter для EF
+{
+    public Task<Product> GetById(int id) { ... }
+    public Task<Product> Save(Product product) { ... }
+}
+
+public class MongoDbProductAdapter : IProductRepository // Adapter для MongoDB
+{
+    public Task<Product> GetById(int id) { ... }
+    public Task<Product> Save(Product product) { ... }
+}
+
+public class InMemoryProductAdapter : IProductRepository // Adapter для тестів
+{
+    private Dictionary<int, Product> _data = new();
+    public Task<Product> GetById(int id) { ... }
+    public Task<Product> Save(Product product) { ... }
+}
+```
+
+**Чим це відрізняється від Clean?**
+
+| Цей аспект | Clean | Hexagonal |
+|-----------|-------|-----------|
+| Інтерфейс де? | Application Layer | Domain Layer (Port) |
+| Фокус | Архітектура слоїв | Замінність адаптерів |
+| Тестування | Mock інтерфейс | Swap Adapter (InMemory) |
+| Логіка | Use Cases | Domain + Ports |
+
+**Переваги Hexagonal:**
+- ✅ **Адаптери легко міняти**: тести → InMemory, продакшн → EF, завтра → MongoDB
+- ✅ **Domain не знає про реалізацію** (максимальна ізоляція)
+- ✅ добре для систем з множинними зовнішніми інтеграціями
+
+---
+
+### 7. Vertical Slice Architecture: інший світогляд
+
+На відміну від **layer-based** (шари), це **feature-based** організація.
+
+```
+TRADITIONAL (Шари)              VERTICAL SLICE (Фічи)
+───────────────────             ──────────────────
+src/                            src/
+├─ Controllers/                 ├─ Features/
+│  ├─ ProductsController        │  ├─ CreateProduct/
+│  ├─ OrdersController          │  │  ├─ CreateProductCommand.cs
+│  └─ CustomersController       │  │  ├─ CreateProductHandler.cs
+│                               │  │  ├─ CreateProductValidator.cs
+├─ Services/                    │  │  ├─ IProductRepository.cs
+│  ├─ ProductService            │  │  └─ ProductRepository.cs
+│  ├─ OrderService              │  │
+│  └─ CustomerService           │  ├─ GetProducts/
+│                               │  │  ├─ GetProductsQuery.cs
+├─ Repositories/                │  │  ├─ GetProductsHandler.cs
+│  ├─ ProductRepository         │  │  └─ ProductRepository.cs
+│  ├─ OrderRepository           │  │
+│  └─ CustomerRepository        │  └─ UpdateProduct/
+│                               │     └─ ...
+└─ Models/
+   ├─ Product
+   ├─ Order
+   └─ Customer
+```
+
+**Принцип**: кожна фіча контролює своє залізо (Controller → Handler → Repository).
+
+**Переваги**:
+- ✅ **Локальні залежності**: змінити CreateProduct не впливає на GetProducts
+- ✅ **Швидше додавати фічи**: створити папку, насипати файлів, готово
+- ✅ **Менше конфліктів при merge**: усі файли фіч в одній папці
+- ✅ **Легше видалити фічу**: видалити папку, готово
+
+**Недоліки**:
+- ❌ **Дублювання**: Repository може існувати в кількох слайсах
+- ❌ **Менше централізації**: важче знаходити спільні речі
+- ❌ **Потребує дисципліни**: без чіткої структури → хаос
+
+---
+
+### 8. Інфраструктура та Dependency Injection
+
+Як усе це скрутити разом?
+
+```csharp
+// Program.cs (Composition Root)
+
+var services = new ServiceCollection();
+
+// Domain (нічого не залежить)
+services.AddScoped<IProductDomainService, ProductDomainService>();
+
+// Application (залежить від Domain + Ports/Interfaces)
+services.AddScoped<CreateProductUseCase>();
+services.AddScoped<UpdateProductUseCase>();
+
+// Infrastructure (реалізує Ports/Interfaces)
+services.AddScoped<IProductRepository, EFCoreProductRepository>();
+services.AddDbContext<ApplicationDbContext>();
+
+// Presentation
+services.AddControllers();
+
+var app = services.BuildServiceProvider();
+```
+
+**DI забезпечує Dependency Rule**: 
+- ✅ Application не знає про реалізацію Repository
+- ✅ легко підміняти (тести, конфігурація)
+- ✅ залежності експліцитні
+
+---
+
+## ⚠️ Типові помилки розробників
+
+### 1. Плутати інверсію залежностей з просто додаванням інтерфейсів
+```csharp
+// ❌ Це не архітектура, це просто "більше коду"
+public interface IProductRepository { }
+public class ProductRepository : IProductRepository { }
+public class ProductService { private readonly IProductRepository _repo; } // але Service у середині, Repository зовні
+```
+
+### 2. Вважати, що Clean = обов'язково Rich Domain Model
+Clean часто використовує **Anemic Domain Model** з логікою у **Use Cases**. Це не менш Clean!
+
+### 3. Комбінувати концепції випадково
+- "Vertical Slice Onion" = плутанина (або слої, або фічи)
+- "Hexagonal Clean" = можливо, але це імплементація, не архітектура
+- "CQRS 3-Layer" = додає складність без користі
+
+### 4. Ставити Entity = Request Body
+```csharp
+// ❌ Змішана архітектура
+[HttpPost]
+public void Create(Product product) // Product = Entity = DTO? Неясно!
+```
+
+### 5. Забувати про DTO
+```csharp
+// ❌ Лікує JSON напряму в Entity
+public class Product
+{
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+}
+// Тепер Entity знає про JSON. Це шум.
+```
+
+### 6. Надто рано (або надто пізно) вводити архітектуру
+- **CRUD на три таблиці?** Почніть з 3-Layer. DI, Use Cases потім.
+- **Складна бізнес-логіка?** Clean чи Onion з самого початку.
+
+### 7. Забувати про контекст проекту
+- Стартап = швидкість (3-Layer, можливо Vertical Slice)
+- Enterprise = якість (Clean, Onion)
+- Мікросервіс = рівновага (Clean + Vertical)
 
 ---
 
