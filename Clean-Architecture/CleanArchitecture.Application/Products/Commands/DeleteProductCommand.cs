@@ -5,6 +5,7 @@ namespace CleanArchitecture.Application.Products.Commands;
 
 /// <summary>
 /// APPLICATION LAYER - Use Case для видалення продукту
+/// ПРИМІТКА: Це CQS Command. Альтернатива - метод DeleteAsync() у сервісі.
 /// </summary>
 public record DeleteProductCommand(int Id) : IRequest<bool>;
 

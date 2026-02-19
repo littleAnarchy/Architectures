@@ -6,6 +6,7 @@ namespace CleanArchitecture.Application.Products.Commands;
 
 /// <summary>
 /// APPLICATION LAYER - Use Case для оновлення продукту
+/// ПРИМІТКА: Це CQS Command. Альтернатива - метод UpdateAsync() у сервісі.
 /// </summary>
 public record UpdateProductCommand(
     int Id,

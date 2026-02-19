@@ -8,6 +8,10 @@ namespace CleanArchitecture.API.Controllers;
 /// <summary>
 /// PRESENTATION LAYER - Контролер
 /// Не містить бізнес-логіки, тільки маршрутизація до Use Cases
+/// 
+/// ПРИМІТКА: Тут використовується MediatR для виклику Use Cases.
+/// Альтернатива: можна використовувати звичайні сервіси (IProductService).
+/// Головне - контролер не містить бізнес-логіки.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
