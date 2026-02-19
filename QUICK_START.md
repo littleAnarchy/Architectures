@@ -36,7 +36,7 @@ dotnet run
 
 ---
 
-## 📝 Приклади запитів (для всіх трьох архітектур)
+## 📝 Приклади запитів (для прикладів у цьому репозиторії)
 
 ### 1. Отримати всі продукти
 ```powershell
@@ -246,7 +246,7 @@ Invoke-RestMethod -Uri "http://localhost:5001/api/products" `
 
 ## 📊 Порівняти поведінку архітектур
 
-### Тест 1: Створити продукт в усіх трьох
+### Тест 1: Створити продукт у всіх прикладах
 ```powershell
 $testProduct = @{
     name = "Тестовий продукт"
@@ -266,6 +266,14 @@ Invoke-RestMethod -Uri "http://localhost:5002/api/products" `
 # Onion
 Invoke-RestMethod -Uri "http://localhost:5003/api/products" `
     -Method Post -Body $testProduct -ContentType "application/json"
+
+# Hexagonal
+Invoke-RestMethod -Uri "http://localhost:5004/api/products" `
+    -Method Post -Body $testProduct -ContentType "application/json"
+
+# Vertical Slice
+Invoke-RestMethod -Uri "http://localhost:5005/api/products" `
+    -Method Post -Body $testProduct -ContentType "application/json"
 ```
 
 ### Тест 2: Порівняти швидкість відповіді
@@ -281,6 +289,14 @@ Measure-Command {
 
 Measure-Command {
     Invoke-RestMethod -Uri "http://localhost:5003/api/products" -Method Get
+} | Select-Object TotalMilliseconds
+
+Measure-Command {
+    Invoke-RestMethod -Uri "http://localhost:5004/api/products" -Method Get
+} | Select-Object TotalMilliseconds
+
+Measure-Command {
+    Invoke-RestMethod -Uri "http://localhost:5005/api/products" -Method Get
 } | Select-Object TotalMilliseconds
 ```
 

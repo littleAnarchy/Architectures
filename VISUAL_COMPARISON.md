@@ -317,6 +317,40 @@ public async Task ProductService_Create_ShouldUseAllLayers()
           │
           │ depends on
           ▼
+
+### Hexagonal Architecture
+```
+Hexagonal-Architecture/
+├── Hexagonal.API/                # Presentation + Adapters registration
+│   ├── Controllers/
+│   │   └── ProductsController.cs
+│   ├── Adapters/
+│   │   └── InMemoryProductRepository.cs
+│   ├── Ports/
+│   │   └── IProductRepository.cs
+│   └── Domain/
+│       └── Product.cs
+└── README.md
+```
+
+### Vertical Slice Architecture
+```
+Vertical-Slice/
+├── VerticalSlice.API/             # API with feature folders
+│   ├── Controllers/
+│   │   └── ProductsController.cs
+│   ├── Features/
+│   │   └── Products/
+│   │       ├── GetAll/
+│   │       ├── GetById/
+│   │       └── Create/
+│   ├── Infrastructure/
+│   │   └── InMemoryProductRepository.cs
+│   └── Domain/
+│       └── Product.cs
+└── README.md
+```
+
 ┌─────────────────────┐
 │  ProductRepository   │
 └─────────────────────┘
