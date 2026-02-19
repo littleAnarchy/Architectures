@@ -414,11 +414,78 @@ public class CreateProductUseCase
 
 ---
 
-### 5. Use Cases (Clean) vs Application Services (Onion)
+### 5. Clean Architecture vs Onion Architecture: ключові відмінності
 
-Це **різні парадигми**, не синоніми!
+**Clean і Onion** базуються на одних принципах (Dependency Rule, Domain в центрі), але мають **різну філософію організації**.
 
-#### Clean Architecture підхід: Use Cases
+#### Загальне порівняння
+
+| Аспект | Clean Architecture | Onion Architecture |
+|--------|-------------------|-------------------|
+| **Фокус** | Повна методологія з boundaries, use cases, flow даних | Структурний принцип залежностей (шари + Domain в центрі) |
+| **Формалізація** | Висока - чітко описані boundaries, Interactors, flow | Середня - фокус на dependency rule, менше деталей про flow |
+| **Кількість шарів** | 4 чітко визначені: Entities, Use Cases, Interface Adapters, Frameworks | 4-5 шарів: Domain, Domain Services, App Services, Infrastructure, UI |
+| **Use Cases** | ✅ Обов'язкова частина, детально описана (Input/Output boundaries) | ❌ Не є частиною оригінальної концепції |
+| **Boundaries/Ports** | ✅ Чітко формалізовані Input/Output boundaries | Частково (IRepository в Domain, але без детального flow) |
+| **Flow викликів** | ✅ Детально описаний: Controller→Input Boundary→Use Case→Output Boundary→Presenter | ❌ Не описаний, лише dependency rule |
+| **Repository Interface** | В Use Cases Layer (Application) | Чітко: в Domain Layer |
+| **CQRS** | Не є обов'язковим, але природно вписується в Use Cases | ❌ Не є частиною концепції |
+| **Гнучкість** | Середня - є чіткі правила про flow та boundaries | Висока - головне dependency rule, деталі на розсуд |
+| **Для кого** | Для проектів, де потрібна детальна ізоляція use cases | Для тих, хто хоче Domain-центричність без зайвого церемоніалу |
+
+#### Структурна різниця
+
+**Clean Architecture**:
+```
+API/UI → Infrastructure → Application (Use Cases + Interfaces) → Domain (Entities)
+                              ↑ тут інтерфейси Repository
+```
+
+**Onion Architecture**:
+```
+API → Infrastructure → Application Services → Domain Services → Domain Model
+                                                  ↑ тут інтерфейси Repository
+```
+
+**Візуально:**
+
+```
+Clean Architecture                 Onion Architecture
+┌─────────────────┐               ┌─────────────────┐
+│       API       │               │       API       │
+└────────┬────────┘               └────────┬────────┘
+         │                                 │
+┌────────▼────────┐               ┌────────▼────────┐
+│ Infrastructure  │               │ Infrastructure  │
+└────────┬────────┘               └────────┬────────┘
+         │                                 │
+┌────────▼────────┐               ┌────────▼─────────┐
+│ Application     │               │ App Services     │
+│ - Use Cases     │               │ (група методів)  │
+│ - IRepository ← │               └────────┬─────────┘
+└────────┬────────┘                        │
+         │                        ┌────────▼─────────┐
+┌────────▼────────┐               │ Domain Services  │
+│     Domain      │               │ - IRepository ← │
+│   (Entities)    │               └────────┬─────────┘
+└─────────────────┘                        │
+                                  ┌────────▼─────────┐
+                                  │  Domain Model    │
+                                  │   (Entities)     │
+                                  └──────────────────┘
+```
+
+**Ключова відмінність**: 
+- **Clean Architecture** — це **детально формалізована методологія** з чітко визначеними Use Cases, Input/Output boundaries, Interactors, і детальним описом flow даних. Uncle Bob описав не лише dependency rule, а й те **як саме** організовувати взаємодію між шарами через boundaries.
+- **Onion Architecture** — це **структурний принцип** залежностей: Domain в центрі, залежності йдуть всередину, IRepository в Domain. Jeffrey Palermo описав **де розміщувати** компоненти, але не деталізував use cases, boundaries, чи конкретний flow викликів.
+
+---
+
+#### Use Cases (Clean) vs Application Services (Onion)
+
+Це **різні парадигми організації Application Layer**, не синоніми!
+
+##### Clean Architecture підхід: Use Cases
 
 ```csharp
 // ✅ Один Use Case = одна операція (CQRS spirit)
@@ -528,7 +595,31 @@ public class ProductApplicationService
 - ❌ Методи можуть накопичуватися (God Service)
 
 ---
+#### Коли використовувати Clean, коли Onion?
 
+**Використовуйте Clean Architecture, якщо:**
+- ✅ Потрібна формальна ізоляція use cases через boundaries
+- ✅ Хочете детально контролювати flow даних (Input→Interactor→Output)
+- ✅ Команда звикла до CQRS/MediatR підходу (природно вписується)
+- ✅ Важлива явна ізоляція бізнес-правил від зовнішнього світу
+- ✅ Потрібна детальна методологія з чіткими правилами
+
+**Використовуйте Onion Architecture, якщо:**
+- ✅ Хочете Domain-центричність без зайвого церемоніалу
+- ✅ Достатньо dependency rule без детального flow через boundaries
+- ✅ Команда практикує DDD і хоче IRepository в Domain
+- ✅ Потрібна гнучкість у деталях (Onion не диктує use cases/boundaries)
+- ✅ Шукаєте баланс між архітектурною чистотою та простотою
+
+**Практичний висновок:**
+- **Clean** = "детальна методологія: boundaries, use cases, formalized flow"
+- **Onion** = "структурний принцип: Domain в центрі, dependency rule, решта гнучко"
+
+**Важливо**: У .NET-спільноті багато проектів називають себе "Clean", але реалізують щось ближче до Onion (Domain + Services без формальних boundaries).
+
+Обидві архітектури **правильні** і базуються на одних принципах. Вибір залежить від команди, проекту та переваг.
+
+---
 **Важливо**: Clean використовує **Use Cases**, Onion використовує **Application Services**. Це різне мислення!
 
 ---
