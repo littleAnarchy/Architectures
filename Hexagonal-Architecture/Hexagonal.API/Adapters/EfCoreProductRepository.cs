@@ -1,17 +1,17 @@
 using Microsoft.EntityFrameworkCore;
-using ThreeLayerArchitecture.Models;
+using HexagonalArchitecture.Domain;
+using HexagonalArchitecture.Ports;
 
-namespace ThreeLayerArchitecture.DataAccessLayer;
+namespace HexagonalArchitecture.Adapters;
 
 /// <summary>
-/// DATA ACCESS LAYER - Реалізація репозиторію з використанням Entity Framework Core
-/// Надає доступ до бази даних через DbContext
+/// Adapter - реалізація порту з використанням Entity Framework Core
 /// </summary>
-public class ProductRepository : IProductRepository
+public class EfCoreProductRepository : IProductRepository
 {
-    private readonly AppDbContext _context;
+    private readonly ProductDbContext _context;
 
-    public ProductRepository(AppDbContext context)
+    public EfCoreProductRepository(ProductDbContext context)
     {
         _context = context;
     }
@@ -43,12 +43,10 @@ public class ProductRepository : IProductRepository
     public async Task<bool> DeleteAsync(int id)
     {
         var product = await _context.Products.FindAsync(id);
-        if (product != null)
-        {
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-        return false;
+        if (product == null) return false;
+        
+        _context.Products.Remove(product);
+        await _context.SaveChangesAsync();
+        return true;
     }
 }

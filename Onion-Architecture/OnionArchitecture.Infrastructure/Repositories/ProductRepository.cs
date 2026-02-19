@@ -1,61 +1,58 @@
+using Microsoft.EntityFrameworkCore;
 using OnionArchitecture.Domain.Entities;
 using OnionArchitecture.Domain.Interfaces;
+using OnionArchitecture.Infrastructure.Persistence;
 
 namespace OnionArchitecture.Infrastructure.Repositories;
 
 /// <summary>
-/// INFRASTRUCTURE LAYER (Outer Ring) - Repository Implementation
+/// INFRASTRUCTURE LAYER (Outer Ring) - Repository Implementation з Entity Framework Core
 /// Реалізує інтерфейс з Domain Layer
 /// Містить технічні деталі роботи з даними
 /// </summary>
 public class ProductRepository : IProductRepository
 {
-    // Імітація бази даних
-    private readonly List<Product> _products = new()
-    {
-        new Product("Ноутбук", 25000, "Потужний ноутбук", 10) { Id = 1 },
-        new Product("Миша", 500, "Бездротова миша", 50) { Id = 2 },
-        new Product("Клавіатура", 1200, "Механічна клавіатура", 30) { Id = 3 },
-        new Product("Монітор", 8000, "4K монітор", 5) { Id = 4 }
-    };
+    private readonly ApplicationDbContext _context;
 
-    public Task<IEnumerable<Product>> GetAllAsync()
+    public ProductRepository(ApplicationDbContext context)
     {
-        return Task.FromResult<IEnumerable<Product>>(_products);
+        _context = context;
     }
 
-    public Task<Product?> GetByIdAsync(int id)
+    public async Task<IEnumerable<Product>> GetAllAsync()
     {
-        var product = _products.FirstOrDefault(p => p.Id == id);
-        return Task.FromResult(product);
+        return await _context.Products.ToListAsync();
     }
 
-    public Task<Product> AddAsync(Product product)
+    public async Task<Product?> GetByIdAsync(int id)
     {
-        product.Id = _products.Any() ? _products.Max(p => p.Id) + 1 : 1;
-        _products.Add(product);
-        return Task.FromResult(product);
+        return await _context.Products.FindAsync(id);
     }
 
-    public Task<Product> UpdateAsync(Product product)
+    public async Task<Product> AddAsync(Product product)
     {
-        var index = _products.FindIndex(p => p.Id == product.Id);
-        if (index >= 0)
-        {
-            _products[index] = product;
-        }
-        return Task.FromResult(product);
+        _context.Products.Add(product);
+        await _context.SaveChangesAsync();
+        return product;
     }
 
-    public Task<bool> DeleteAsync(int id)
+    public async Task<Product> UpdateAsync(Product product)
     {
-        var product = _products.FirstOrDefault(p => p.Id == id);
+        _context.Products.Update(product);
+        await _context.SaveChangesAsync();
+        return product;
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var product = await _context.Products.FindAsync(id);
         if (product != null)
         {
-            _products.Remove(product);
-            return Task.FromResult(true);
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            return true;
         }
-        return Task.FromResult(false);
+        return false;
     }
 
     public Task<bool> ExistsAsync(int id)

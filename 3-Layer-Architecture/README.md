@@ -51,3 +51,15 @@ dotnet run
 ```
 
 Swagger UI: https://localhost:5001/swagger
+
+## Технології
+- ASP.NET Core 8.0
+- Entity Framework Core 8.0 з SQLite
+- Swagger/OpenAPI
+
+### Entity Framework Core
+Проект використовує EF Core для роботи з SQLite базою даних:
+- **DbContext**: `AppDbContext` в `DataAccessLayer/`
+- **Repository**: `ProductRepository` використовує `AppDbContext` для всіх операцій з БД
+- **Connection String**: в `appsettings.json` (`Data Source=products.db`)
+- База даних створюється автоматично при першому запуску з seed даними

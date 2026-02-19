@@ -114,6 +114,18 @@ dotnet run
 
 Swagger UI: https://localhost:5001/swagger
 
+## Технології
+- ASP.NET Core 8.0
+- Entity Framework Core 8.0 з SQLite
+- Swagger/OpenAPI
+
+### Entity Framework Core
+- **DbContext**: `ApplicationDbContext` в Infrastructure Layer
+- **Repository**: `ProductRepository` в Infrastructure реалізує інтерфейс з Domain
+- Інтерфейси репозиторіїв знаходяться в Domain Layer (ядро)
+- База даних створюється автоматично при запуску
+- Демонструє залежності "всередину" — Infrastructure залежить від Domain
+
 ## Приклади ендпоінтів
 - `GET /api/products` - отримати всі продукти
 - `GET /api/products/{id}` - отримати продукт за ID

@@ -73,6 +73,18 @@ dotnet run
 
 Swagger UI: https://localhost:5001/swagger
 
+## Технології
+- ASP.NET Core 8.0
+- Entity Framework Core 8.0 з SQLite
+- MediatR для CQRS
+- Swagger/OpenAPI
+
+### Entity Framework Core
+- **DbContext**: `ApplicationDbContext` в Infrastructure Layer
+- **Repository**: `ProductRepository` використовує DbContext
+- База даних створюється автоматично при запуску
+- Демонструє повну інверсію залежностей (Infrastructure залежить від Application)
+
 ## Ключові відмінності від 3-Layer
 1. **Інверсія залежностей**: Domain не залежить ні від чого
 2. **Use Cases**: Кожна бізнес-операція - окремий клас

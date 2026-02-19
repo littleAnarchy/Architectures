@@ -1,5 +1,7 @@
 using CleanArchitecture.Application.Interfaces;
 using CleanArchitecture.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CleanArchitecture.Infrastructure;
@@ -9,10 +11,16 @@ namespace CleanArchitecture.Infrastructure;
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructureServices(
+        this IServiceCollection services, 
+        IConfiguration configuration)
     {
+        // Реєструємо DbContext з Entity Framework Core
+        services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+
         // Реєструємо реалізації інтерфейсів з Application
-        services.AddSingleton<IProductRepository, ProductRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
         
         return services;
     }
