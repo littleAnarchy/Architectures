@@ -40,6 +40,6 @@ public class CreateProductHandler : IRequestHandler<CreateProductCommand, Produc
             request.Stock
         );
 
-        return await _repository.AddAsync(product);
+        return await _repository.AddAsync(product, cancellationToken);
     }
 }

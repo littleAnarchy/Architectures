@@ -20,18 +20,18 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetAll()
+    public async Task<ActionResult<IEnumerable<Product>>> GetAll(CancellationToken cancellationToken)
     {
-        var products = await _productService.GetAllProductsAsync();
+        var products = await _productService.GetAllProductsAsync(cancellationToken);
         return Ok(products);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Product>> GetById(int id)
+    public async Task<ActionResult<Product>> GetById(int id, CancellationToken cancellationToken)
     {
         try
         {
-            var product = await _productService.GetProductByIdAsync(id);
+            var product = await _productService.GetProductByIdAsync(id, cancellationToken);
             return Ok(product);
         }
         catch (KeyNotFoundException)
@@ -41,11 +41,11 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Product>> Create([FromBody] CreateProductDto dto)
+    public async Task<ActionResult<Product>> Create([FromBody] CreateProductDto dto, CancellationToken cancellationToken)
     {
         try
         {
-            var product = await _productService.CreateProductAsync(dto.Name, dto.Price, dto.Description, dto.Stock);
+            var product = await _productService.CreateProductAsync(dto.Name, dto.Price, dto.Description, dto.Stock, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
         }
         catch (ArgumentException ex)
@@ -55,11 +55,11 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<Product>> Update(int id, [FromBody] UpdateProductDto dto)
+    public async Task<ActionResult<Product>> Update(int id, [FromBody] UpdateProductDto dto, CancellationToken cancellationToken)
     {
         try
         {
-            var product = await _productService.UpdateProductAsync(id, dto.Name, dto.Price, dto.Description, dto.Stock);
+            var product = await _productService.UpdateProductAsync(id, dto.Name, dto.Price, dto.Description, dto.Stock, cancellationToken);
             return Ok(product);
         }
         catch (KeyNotFoundException)
@@ -73,11 +73,11 @@ public class ProductsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete(int id)
+    public async Task<ActionResult> Delete(int id, CancellationToken cancellationToken)
     {
         try
         {
-            await _productService.DeleteProductAsync(id);
+            await _productService.DeleteProductAsync(id, cancellationToken);
             return NoContent();
         }
         catch (KeyNotFoundException)
@@ -87,11 +87,11 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost("{id}/reduce-stock")]
-    public async Task<ActionResult> ReduceStock(int id, [FromBody] ReduceStockDto dto)
+    public async Task<ActionResult> ReduceStock(int id, [FromBody] ReduceStockDto dto, CancellationToken cancellationToken)
     {
         try
         {
-            await _productService.ReduceStockAsync(id, dto.Quantity);
+            await _productService.ReduceStockAsync(id, dto.Quantity, cancellationToken);
             return Ok(new { message = "Запаси успішно зменшено" });
         }
         catch (KeyNotFoundException)

@@ -10,8 +10,7 @@ public class GetAllProductsHandler : IRequestHandler<GetAllProductsQuery, IEnume
 {
     private readonly IProductRepository _repo;
     public GetAllProductsHandler(IProductRepository repo) => _repo = repo;
-    public Task<IEnumerable<Product>> Handle(GetAllProductsQuery request, CancellationToken cancellationToken)
-    {
-        return _repo.GetAllAsync();
-    }
+    
+    public Task<IEnumerable<Product>> Handle(GetAllProductsQuery request, CancellationToken cancellationToken) =>
+        _repo.GetAllAsync(cancellationToken);
 }

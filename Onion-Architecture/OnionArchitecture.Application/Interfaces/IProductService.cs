@@ -9,11 +9,11 @@ namespace OnionArchitecture.Application.Interfaces;
 /// </summary>
 public interface IProductService
 {
-    Task<IEnumerable<Product>> GetAllProductsAsync();
-    Task<Product> GetProductByIdAsync(int id);
-    Task<Product> CreateProductAsync(string name, decimal price, string description, int stock);
-    Task<Product> UpdateProductAsync(int id, string name, decimal price, string description, int stock);
-    Task DeleteProductAsync(int id);
-    Task ReduceStockAsync(int productId, int quantity);
-    Task<decimal> GetProductTotalValueAsync(int productId);
+    Task<IEnumerable<Product>> GetAllProductsAsync(CancellationToken cancellationToken = default);
+    Task<Product> GetProductByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<Product> CreateProductAsync(string name, decimal price, string description, int stock, CancellationToken cancellationToken = default);
+    Task<Product> UpdateProductAsync(int id, string name, decimal price, string description, int stock, CancellationToken cancellationToken = default);
+    Task DeleteProductAsync(int id, CancellationToken cancellationToken = default);
+    Task ReduceStockAsync(int productId, int quantity, CancellationToken cancellationToken = default);
+    Task<decimal> GetProductTotalValueAsync(int productId, CancellationToken cancellationToken = default);
 }

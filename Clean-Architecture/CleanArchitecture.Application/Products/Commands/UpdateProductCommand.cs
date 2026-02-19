@@ -27,7 +27,7 @@ public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Produc
 
     public async Task<Product> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
-        var product = await _repository.GetByIdAsync(request.Id);
+        var product = await _repository.GetByIdAsync(request.Id, cancellationToken);
         if (product == null)
             throw new KeyNotFoundException($"Продукт з ID {request.Id} не знайдено");
 
@@ -37,6 +37,6 @@ public class UpdateProductHandler : IRequestHandler<UpdateProductCommand, Produc
         product.Description = request.Description;
         product.SetStock(request.Stock);
 
-        return await _repository.UpdateAsync(product);
+        return await _repository.UpdateAsync(product, cancellationToken);
     }
 }

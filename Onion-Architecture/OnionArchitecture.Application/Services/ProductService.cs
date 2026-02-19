@@ -23,21 +23,19 @@ public class ProductService : IProductService
         _domainService = domainService;
     }
 
-    public async Task<IEnumerable<Product>> GetAllProductsAsync()
-    {
-        return await _repository.GetAllAsync();
-    }
+    public Task<IEnumerable<Product>> GetAllProductsAsync(CancellationToken cancellationToken = default) =>
+        _repository.GetAllAsync(cancellationToken);
 
-    public async Task<Product> GetProductByIdAsync(int id)
+    public async Task<Product> GetProductByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var product = await _repository.GetByIdAsync(id);
+        var product = await _repository.GetByIdAsync(id, cancellationToken);
         if (product == null)
             throw new KeyNotFoundException($"Продукт з ID {id} не знайдено");
             
         return product;
     }
 
-    public async Task<Product> CreateProductAsync(string name, decimal price, string description, int stock)
+    public async Task<Product> CreateProductAsync(string name, decimal price, string description, int stock, CancellationToken cancellationToken = default)
     {
         // Використовуємо Domain Service для валідації
         if (!_domainService.ValidateProductData(name, price, stock))
@@ -47,13 +45,13 @@ public class ProductService : IProductService
         var product = new Product(name, price, description, stock);
 
         // Зберігаємо через репозиторій
-        return await _repository.AddAsync(product);
+        return await _repository.AddAsync(product, cancellationToken);
     }
 
-    public async Task<Product> UpdateProductAsync(int id, string name, decimal price, string description, int stock)
+    public async Task<Product> UpdateProductAsync(int id, string name, decimal price, string description, int stock, CancellationToken cancellationToken = default)
     {
         // Перевіряємо існування
-        var product = await GetProductByIdAsync(id);
+        var product = await GetProductByIdAsync(id, cancellationToken);
 
         // Використовуємо Domain Service для валідації
         if (!_domainService.ValidateProductData(name, price, stock))
@@ -70,20 +68,20 @@ public class ProductService : IProductService
             Console.WriteLine($"Увага: Низький рівень запасів для продукту {product.Name}");
         }
 
-        return await _repository.UpdateAsync(product);
+        return await _repository.UpdateAsync(product, cancellationToken);
     }
 
-    public async Task DeleteProductAsync(int id)
+    public async Task DeleteProductAsync(int id, CancellationToken cancellationToken = default)
     {
-        if (!await _repository.ExistsAsync(id))
+        if (!await _repository.ExistsAsync(id, cancellationToken))
             throw new KeyNotFoundException($"Продукт з ID {id} не знайдено");
 
-        await _repository.DeleteAsync(id);
+        await _repository.DeleteAsync(id, cancellationToken);
     }
 
-    public async Task ReduceStockAsync(int productId, int quantity)
+    public async Task ReduceStockAsync(int productId, int quantity, CancellationToken cancellationToken = default)
     {
-        var product = await GetProductByIdAsync(productId);
+        var product = await GetProductByIdAsync(productId, cancellationToken);
 
         // Domain Entity сам валідує і зменшує запаси
         product.ReduceStock(quantity);
@@ -94,12 +92,12 @@ public class ProductService : IProductService
             Console.WriteLine($"Увага: Низький рівень запасів для продукту {product.Name}");
         }
 
-        await _repository.UpdateAsync(product);
+        await _repository.UpdateAsync(product, cancellationToken);
     }
 
-    public async Task<decimal> GetProductTotalValueAsync(int productId)
+    public async Task<decimal> GetProductTotalValueAsync(int productId, CancellationToken cancellationToken = default)
     {
-        var product = await GetProductByIdAsync(productId);
+        var product = await GetProductByIdAsync(productId, cancellationToken);
         
         // Використовуємо Domain Service для обчислень
         return _domainService.CalculateTotalValue(product);

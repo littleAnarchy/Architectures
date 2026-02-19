@@ -10,8 +10,7 @@ public class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, Produc
 {
     private readonly IProductRepository _repo;
     public GetProductByIdHandler(IProductRepository repo) => _repo = repo;
-    public Task<Product?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
-    {
-        return _repo.GetByIdAsync(request.Id);
-    }
+    
+    public Task<Product?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken) =>
+        _repo.GetByIdAsync(request.Id, cancellationToken);
 }

@@ -10,9 +10,13 @@ public class InMemoryProductRepository : IProductRepository
         new Product { Id = 2, Name = "Клавіатура", Price = 1200, Description = "Механічна", Stock = 30 }
     };
 
-    public Task<IEnumerable<Product>> GetAllAsync() => Task.FromResult<IEnumerable<Product>>(_products);
-    public Task<Product?> GetByIdAsync(int id) => Task.FromResult(_products.FirstOrDefault(p => p.Id == id));
-    public Task<Product> AddAsync(Product product)
+    public Task<IEnumerable<Product>> GetAllAsync(CancellationToken cancellationToken = default) => 
+        Task.FromResult<IEnumerable<Product>>(_products);
+    
+    public Task<Product?> GetByIdAsync(int id, CancellationToken cancellationToken = default) => 
+        Task.FromResult(_products.FirstOrDefault(p => p.Id == id));
+    
+    public Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default)
     {
         product.Id = _products.Any() ? _products.Max(p => p.Id) + 1 : 1;
         _products.Add(product);

@@ -14,25 +14,27 @@ public class InMemoryProductRepository : IProductRepository
         new Product { Id = 2, Name = "Миша", Price = 500, Description = "Бездротова", Stock = 50 }
     };
 
-    public Task<IEnumerable<Product>> GetAllAsync() => Task.FromResult<IEnumerable<Product>>(_products);
+    public Task<IEnumerable<Product>> GetAllAsync(CancellationToken cancellationToken = default) => 
+        Task.FromResult<IEnumerable<Product>>(_products);
 
-    public Task<Product?> GetByIdAsync(int id) => Task.FromResult(_products.FirstOrDefault(p => p.Id == id));
+    public Task<Product?> GetByIdAsync(int id, CancellationToken cancellationToken = default) => 
+        Task.FromResult(_products.FirstOrDefault(p => p.Id == id));
 
-    public Task<Product> AddAsync(Product product)
+    public Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default)
     {
         product.Id = _products.Any() ? _products.Max(p => p.Id) + 1 : 1;
         _products.Add(product);
         return Task.FromResult(product);
     }
 
-    public Task<Product> UpdateAsync(Product product)
+    public Task<Product> UpdateAsync(Product product, CancellationToken cancellationToken = default)
     {
         var idx = _products.FindIndex(p => p.Id == product.Id);
         if (idx >= 0) _products[idx] = product;
         return Task.FromResult(product);
     }
 
-    public Task<bool> DeleteAsync(int id)
+    public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         var p = _products.FirstOrDefault(x => x.Id == id);
         if (p == null) return Task.FromResult(false);

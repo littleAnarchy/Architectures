@@ -9,9 +9,9 @@ namespace CleanArchitecture.Application.Interfaces;
 /// </summary>
 public interface IProductRepository
 {
-    Task<IEnumerable<Product>> GetAllAsync();
-    Task<Product?> GetByIdAsync(int id);
-    Task<Product> AddAsync(Product product);
-    Task<Product> UpdateAsync(Product product);
-    Task<bool> DeleteAsync(int id);
+    Task<IEnumerable<Product>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<Product?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
+    Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default);
+    Task<Product> UpdateAsync(Product product, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

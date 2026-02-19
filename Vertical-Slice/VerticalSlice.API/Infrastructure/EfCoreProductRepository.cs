@@ -12,20 +12,20 @@ public class EfCoreProductRepository : IProductRepository
         _context = context;
     }
 
-    public async Task<IEnumerable<Product>> GetAllAsync()
+    public async Task<IEnumerable<Product>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Products.ToListAsync();
+        return await _context.Products.ToListAsync(cancellationToken);
     }
 
-    public async Task<Product?> GetByIdAsync(int id)
+    public async Task<Product?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await _context.Products.FindAsync(id);
+        return await _context.Products.FindAsync(new object[] { id }, cancellationToken);
     }
 
-    public async Task<Product> AddAsync(Product product)
+    public async Task<Product> AddAsync(Product product, CancellationToken cancellationToken = default)
     {
         _context.Products.Add(product);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync(cancellationToken);
         return product;
     }
 }
