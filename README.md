@@ -607,22 +607,25 @@ public class InMemoryProductAdapter : IProductRepository // Adapter для те�
 На відміну від **layer-based** (шари), це **feature-based** організація.
 
 ```
-ШАРИ                        ФІЧІ
+ШАРИ (Layer-based)          СЛАЙСИ (Feature-based)
 src/                        src/Features/
-├─ Controllers/              ├─ CreateProduct/
-├─ Services/                 │  ├─ Handler.cs
-├─ Repositories/             │  ├─ Validator.cs
-└─ Models/                   │  └─ Repository.cs
-                            ├─ GetProducts/
-                            │  ├─ Handler.cs
-                            │  └─ Repository.cs
-                            └─ UpdateProduct/
+├─ Controllers/              ├─ Products/              ← Група по ентіті
+├─ Services/                 │  ├─ CreateProduct/
+├─ Repositories/             │  │  ├─ Handler.cs
+└─ Models/                   │  │  └─ Validator.cs
+                            │  ├─ GetProducts/
+                            │  │  └─ Handler.cs
+                            │  └─ UpdateProduct/
+                            │     └─ Handler.cs
+                            └─ Infrastructure/        ← Спільна інфраструктура
+                               ├─ AppDbContext.cs
+                               └─ IProductRepository.cs
 ```
 
-**Принцип**: Кожна фіча = повний стек (Handler → Repository)
+**Принцип**: Кожна фіча = повний стек (Handler → Domain/Data)
 
 **Плюси**: Локальні зміни, швидко додавати фічі, менше конфліктів  
-**Мінуси**: Можливе дублювання, потребує дисципліни
+**Мінуси**: Потрібна дисципліна, щоб уникнути дублювання спільної логіки
 
 ---
 
